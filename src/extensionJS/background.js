@@ -1,4 +1,4 @@
-var tabsIds = {};
+var tabsIdsAndTitles = {};
 var urlList = [];
 
 function isInvalidUrl(url) {
@@ -17,7 +17,7 @@ function isInvalidUrl(url) {
 chrome.tabs.onUpdated.addListener((tabid, changeInfo, tab) => {
   console.log(tabid, tab, changeInfo);
   if (isInvalidUrl(tab.url)) return;
-  tabsIds[tab.title] = tab.id;
+  tabsIdsAndTitles[tab.title] = tab.id;
   console.log("Url util");
 });
 
@@ -27,7 +27,7 @@ chrome.tabs.onCreated.addListener((tabid, changeInfo, tab) => {
     return;
   }
 
-  tabsIds[tab.title] = tab.id;
+  tabsIdsAndTitles[tab.title] = tab.id;
   console.log(`Titulo: ${tab.title} e Id: ${tab.id}`);
 
   // getting the url in order to match the tab title
@@ -37,8 +37,12 @@ chrome.tabs.onCreated.addListener((tabid, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener(function (tabId) {
-  let tabTitle = tabsIds[tabId];
+  let tabTitle = tabsIdsAndTitles[tabId];
   console.log(tabTitle);
 
   if (tabTitle) openTabs = openTabs.filter((tab) => tab !== tabTitle);
+});
+
+chrome.runtime.onMessage.addListener((request, sendResponse) => {
+  if (request.action === "getTabsIdsAndTitles") sendResponse(tabsIdsAndTitles);
 });
