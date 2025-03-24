@@ -1,0 +1,22 @@
+body {
+  width: 400px; /* Aumenta a largura */
+  height: 500px; /* Aumenta a altura */
+  padding: 10px;
+  font-family: Arial, sans-serif;
+}
+
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+  justify-content: start;
+  box-shadow: 2px 2px 2px #f9f9f9;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background-color: green;
+}

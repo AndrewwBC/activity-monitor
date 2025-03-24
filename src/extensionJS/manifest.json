@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "Busca Abas",
+  "description": "Captura os títulos das abas abertas.",
+  "version": "1.0",
+  "permissions": ["tabs"],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Clique para capturar os títulos"
+  }
+}
