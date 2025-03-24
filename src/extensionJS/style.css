@@ -9,7 +9,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  align-items: center;
+  align-items: start;
   justify-content: start;
   box-shadow: 2px 2px 2px #f9f9f9;
 }
@@ -17,6 +17,5 @@ body {
 .list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  background-color: green;
+  gap: 8px;
 }
