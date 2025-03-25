@@ -1,13 +1,13 @@
 interface TabsDataProps {
-  title?: string;
-  url?: string;
+  title: string;
+  url: string;
+  creationDate?: string;
+  endDate?: string;
 }
 
 type TabsDataType = Record<number, TabsDataProps>;
 
 const tabsData: TabsDataType = {};
-
-var urlList = [];
 
 function isInvalidUrl(url: string) {
   console.log(url);
@@ -24,7 +24,9 @@ function isInvalidUrl(url: string) {
 }
 
 function addData(tabId: number, url: string, title: string) {
-  tabsData[tabId] = { url, title };
+  let cleanUrl = url!.match(/https?:\/\/[^\/]+\/?/)![0];
+
+  tabsData[tabId] = { url: cleanUrl, title };
 }
 
 type ChangeInfoType = chrome.tabs.TabChangeInfo;
@@ -37,23 +39,15 @@ chrome.tabs.onUpdated.addListener(
 
     if (changeInfo.status == "complete") addData(tabId, tab.url!, tab.title!);
     console.log(tabsData);
+    postData(tabsData);
   }
 );
 
 chrome.tabs.onCreated.addListener((tab: TabType) => {
-  if (isInvalidUrl(tab.url!)) {
-    return;
-  }
-  console.log("Url util");
+  if (isInvalidUrl(tab.url!)) return;
 
   addData(tab.id!, tab.url!, tab.title!);
-
-  console.log(`Titulo: ${tab.title} e Id: ${tab.id}`);
-
-  // getting the url in order to match the tab title
-  let cleanUrl = tab.url!.match(/https?:\/\/[^\/]+\/?/)![0];
-
-  urlList.push(cleanUrl);
+  postData(tabsData);
 });
 
 chrome.tabs.onRemoved.addListener(
@@ -64,3 +58,20 @@ chrome.tabs.onRemoved.addListener(
     if (tabTitle) delete tabsData[tabId];
   }
 );
+
+const url = "http://localhost:8080/api/v1/activity";
+
+const postData = async (tabsData: TabsDataType) => {
+  console.log("Data no postData: " + tabsData);
+  const request = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-type": "Application/json",
+    },
+    body: JSON.stringify({ activity: tabsData }),
+  });
+  console.log(request);
+
+  const response = await request.json();
+  console.log(response);
+};
