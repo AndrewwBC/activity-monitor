@@ -1,4 +1,6 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const api_1 = require("./api");
 const tabsData = {};
 var urlList = [];
 function isInvalidUrl(url) {
@@ -18,6 +20,7 @@ function addData(tabId, url, title) {
     tabsData[tabId] = { url, title };
 }
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    console.log(api_1.url);
     if (isInvalidUrl(tab.url))
         return;
     if (changeInfo.status == "complete")
@@ -29,6 +32,7 @@ chrome.tabs.onCreated.addListener((tab) => {
         return;
     }
     console.log("Url util");
+    console.log(api_1.url);
     addData(tab.id, tab.url, tab.title);
     console.log(`Titulo: ${tab.title} e Id: ${tab.id}`);
     // getting the url in order to match the tab title
