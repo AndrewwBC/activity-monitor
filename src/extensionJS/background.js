@@ -1,4 +1,4 @@
-var tabsIdsAndTitles = {};
+export var tabsIdsAndTitles = {};
 var urlList = [];
 
 function isInvalidUrl(url) {
@@ -17,7 +17,7 @@ function isInvalidUrl(url) {
 chrome.tabs.onUpdated.addListener((tabid, changeInfo, tab) => {
   console.log(tabid, tab, changeInfo);
   if (isInvalidUrl(tab.url)) return;
-  tabsIdsAndTitles[tab.title] = tab.id;
+  tabsIdsAndTitles[tab.id] = tab.title;
   console.log("Url util");
 });
 
@@ -27,7 +27,8 @@ chrome.tabs.onCreated.addListener((tabid, changeInfo, tab) => {
     return;
   }
 
-  tabsIdsAndTitles[tab.title] = tab.id;
+  tabsIdsAndTitles[tab.id] = tab.title;
+
   console.log(`Titulo: ${tab.title} e Id: ${tab.id}`);
 
   // getting the url in order to match the tab title
@@ -36,13 +37,12 @@ chrome.tabs.onCreated.addListener((tabid, changeInfo, tab) => {
   urlList.push(cleanUrl);
 });
 
-chrome.tabs.onRemoved.addListener(function (tabId) {
+chrome.tabs.onRemoved.addListener((tabId, changeInfo, tab) => {
+  if (isInvalidUrl(tab.url)) {
+    return;
+  }
   let tabTitle = tabsIdsAndTitles[tabId];
   console.log(tabTitle);
 
-  if (tabTitle) openTabs = openTabs.filter((tab) => tab !== tabTitle);
-});
-
-chrome.runtime.onMessage.addListener((request, sendResponse) => {
-  if (request.action === "getTabsIdsAndTitles") sendResponse(tabsIdsAndTitles);
+  if (tabTitle) delete tabsIdsAndTitles[tabId];
 });
