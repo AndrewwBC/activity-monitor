@@ -4,7 +4,7 @@
   "version": "1.0",
   "permissions": ["tabs"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "./dist/background.js"
   },
   "action": {
     "default_popup": "popup.html"
