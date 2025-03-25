@@ -8,8 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-const tabsData = {};
-var urlList = [];
+let tabsData = [];
 function isInvalidUrl(url) {
     console.log(url);
     const invalidUrls = [
@@ -24,43 +23,54 @@ function isInvalidUrl(url) {
         return false;
 }
 function addData(tabId, url, title) {
-    tabsData[tabId] = { url, title };
+    let cleanUrl = url.match(/https?:\/\/[^\/]+\/[^\/]+\/?/)[0];
+    tabsData.push({
+        id: tabId,
+        url: cleanUrl,
+        title,
+        creationDate: new Date().toISOString(),
+        endDate: null,
+        updates: 0,
+        stories: 0,
+        facebookReels: 0,
+        facebookStories: 0,
+        instagramReels: 0,
+        youtubeShorts: 0,
+    });
 }
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (isInvalidUrl(tab.url))
         return;
+    const getIndexOftabIdThatAlreadyExists = tabsData.findIndex((tabData) => tabData.id === tabId);
     if (changeInfo.status == "complete")
         addData(tabId, tab.url, tab.title);
     console.log(tabsData);
-    postData(tabsData);
 });
 chrome.tabs.onCreated.addListener((tab) => {
-    if (isInvalidUrl(tab.url)) {
+    if (isInvalidUrl(tab.url))
         return;
-    }
-    console.log("Url util");
+    console.log("EVENTO DE CREATED");
     addData(tab.id, tab.url, tab.title);
-    console.log(`Titulo: ${tab.title} e Id: ${tab.id}`);
-    // getting the url in order to match the tab title
-    let cleanUrl = tab.url.match(/https?:\/\/[^\/]+\/?/)[0];
-    urlList.push(cleanUrl);
     postData(tabsData);
 });
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    let tabTitle = tabsData[tabId];
-    console.log(tabTitle);
-    if (tabTitle)
-        delete tabsData[tabId];
+    tabsData = tabsData.map((tab) => {
+        if (tab.id === tabId) {
+            tab.endDate = new Date().toISOString();
+        }
+        return tab;
+    });
+    console.log(tabsData);
 });
 const url = "http://localhost:8080/api/v1/activity";
 const postData = (tabsData) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("Data no postData: " + tabsData);
+    const lastIndex = tabsData.length - 1;
     const request = yield fetch(url, {
         method: "POST",
         headers: {
             "Content-type": "Application/json",
         },
-        body: JSON.stringify({ activity: tabsData }),
+        body: JSON.stringify(tabsData[lastIndex]),
     });
     console.log(request);
     const response = yield request.json();
