@@ -1,4 +1,4 @@
-interface ActivityProps {
+interface ActivitiesProps {
   id: number;
   title: string;
   url: string;
@@ -11,7 +11,7 @@ interface ActivityProps {
   youtubeShorts: number;
 }
 
-let activity: ActivityProps[] = [];
+let activities: ActivitiesProps[] = [];
 
 function isInvalidUrl(url: string) {
   console.log(url);
@@ -29,27 +29,27 @@ function isInvalidUrl(url: string) {
 
 function counter(url: string, index: number) {
   if (url.includes("instagram.com/")) {
-    if (url.includes("stories")) activity[index].stories += 1;
-    else if (url.includes("reels")) activity[index].instagramReels += 1;
+    if (url.includes("stories")) activities[index].stories += 1;
+    else if (url.includes("reels")) activities[index].instagramReels += 1;
     return;
   }
 
   if (url.includes("youtube.com/shorts")) {
-    activity[index].youtubeShorts += 1;
+    activities[index].youtubeShorts += 1;
     return;
   }
 
   if (url.includes("facebook.com/")) {
-    if (url.includes("stories")) activity[index].facebookStories += 1;
-    else if (url.includes("reel")) activity[index].facebookReels += 1;
+    if (url.includes("stories")) activities[index].facebookStories += 1;
+    else if (url.includes("reel")) activities[index].facebookReels += 1;
     return;
   }
 }
 
 function createData(tabId: number, url: string, title: string) {
-  let cleanUrl = url!.match(/https?:\/\/[^\/]+\/[^\/]+\/?/)![0];
-
-  activity.push({
+  let cleanUrl = url!.match(/https?:\/\/[^\/]+\/[^\/]+\/?.*/)!?.[0];
+  console.log("CLEAN URL: " + cleanUrl);
+  activities.push({
     id: tabId,
     url: cleanUrl,
     title,
@@ -71,13 +71,18 @@ chrome.tabs.onUpdated.addListener(
   (tabId: number, changeInfo: ChangeInfoType, tab: TabType) => {
     if (isInvalidUrl(tab.url!)) return;
 
-    const getIndexOftabIdThatAlreadyExists = activity.findIndex(
+    const getIndexOftabIdThatAlreadyExists = activities.findIndex(
       (tabData) => tabData.id === tabId
     );
+    console.log("Index: " + getIndexOftabIdThatAlreadyExists);
+    if (changeInfo.status == "complete") {
+      if (getIndexOftabIdThatAlreadyExists >= 0)
+        counter(tab.url!, getIndexOftabIdThatAlreadyExists);
+      if (getIndexOftabIdThatAlreadyExists === -1)
+        createData(tab.id!, tab.url!, tab.title!);
+    }
 
-    if (changeInfo.status == "complete")
-      createData(tabId, tab.url!, tab.title!);
-    console.log(activity);
+    console.log(activities);
   }
 );
 
@@ -85,32 +90,32 @@ chrome.tabs.onCreated.addListener((tab: TabType) => {
   if (isInvalidUrl(tab.url!)) return;
   console.log("EVENTO DE CREATED");
   createData(tab.id!, tab.url!, tab.title!);
-  postData(activity);
+  postData(activities);
 });
 
 chrome.tabs.onRemoved.addListener(
   (tabId: number, removeInfo: RemoveInfoType) => {
-    activity = activity.map((tab) => {
+    activities = activities.map((tab) => {
       if (tab.id === tabId) {
         tab.endDate = new Date().toISOString();
       }
       return tab;
     });
-    console.log(activity);
+    console.log(activities);
   }
 );
 
-const url = "http://localhost:8080/api/v1/activity";
+const url = "http://localhost:8080/api/v1/activities";
 
-const postData = async (activity: ActivityProps[]) => {
-  const lastIndex = activity.length - 1;
+const postData = async (activities: ActivitiesProps[]) => {
+  const lastIndex = activities.length - 1;
 
   const request = await fetch(url, {
     method: "POST",
     headers: {
       "Content-type": "Application/json",
     },
-    body: JSON.stringify(activity[lastIndex]),
+    body: JSON.stringify(activities[lastIndex]),
   });
   console.log(request);
 
