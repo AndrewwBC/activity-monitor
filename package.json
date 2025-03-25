@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "@types/chrome": "^0.0.310"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}
