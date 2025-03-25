@@ -1,4 +1,4 @@
-export var tabsIdsAndTitles = {};
+var tabsIdsAndTitles = {};
 var urlList = [];
 
 function isInvalidUrl(url) {
