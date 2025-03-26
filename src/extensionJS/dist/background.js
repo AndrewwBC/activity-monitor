@@ -63,7 +63,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (isInvalidUrl(tab.url))
         return;
     const getIndexOftabIdThatAlreadyExists = activities.findIndex((tabData) => tabData.id === tabId);
-    console.log("Index: " + getIndexOftabIdThatAlreadyExists);
     if (changeInfo.status == "complete") {
         if (getIndexOftabIdThatAlreadyExists >= 0)
             counter(tab.url, getIndexOftabIdThatAlreadyExists);
@@ -72,13 +71,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
     console.log(activities);
 });
-chrome.tabs.onCreated.addListener((tab) => {
-    if (isInvalidUrl(tab.url))
-        return;
-    console.log("EVENTO DE CREATED");
-    createData(tab.id, tab.url, tab.title);
-    postData(activities);
-});
+chrome.tabs.onCreated.addListener((tab) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(tab.status);
+    console.log(tab.url);
+    if (tab.status === "complete") {
+        if (isInvalidUrl(tab.url))
+            return;
+        console.log("EVENTO DE CREATED");
+        createData(tab.id, tab.url, tab.title);
+        yield postData(activities);
+    }
+}));
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     activities = activities.map((tab) => {
         if (tab.id === tabId) {
@@ -88,7 +91,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     });
     console.log(activities);
 });
-const url = "http://localhost:8080/api/v1/activities";
+const url = "http://localhost:8080/api/v1/activity";
 const postData = (activities) => __awaiter(void 0, void 0, void 0, function* () {
     const lastIndex = activities.length - 1;
     const request = yield fetch(url, {

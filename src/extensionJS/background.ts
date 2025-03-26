@@ -74,7 +74,7 @@ chrome.tabs.onUpdated.addListener(
     const getIndexOftabIdThatAlreadyExists = activities.findIndex(
       (tabData) => tabData.id === tabId
     );
-    console.log("Index: " + getIndexOftabIdThatAlreadyExists);
+
     if (changeInfo.status == "complete") {
       if (getIndexOftabIdThatAlreadyExists >= 0)
         counter(tab.url!, getIndexOftabIdThatAlreadyExists);
@@ -85,13 +85,6 @@ chrome.tabs.onUpdated.addListener(
     console.log(activities);
   }
 );
-
-chrome.tabs.onCreated.addListener((tab: TabType) => {
-  if (isInvalidUrl(tab.url!)) return;
-  console.log("EVENTO DE CREATED");
-  createData(tab.id!, tab.url!, tab.title!);
-  postData(activities);
-});
 
 chrome.tabs.onRemoved.addListener(
   (tabId: number, removeInfo: RemoveInfoType) => {
@@ -105,7 +98,7 @@ chrome.tabs.onRemoved.addListener(
   }
 );
 
-const url = "http://localhost:8080/api/v1/activities";
+const url = "http://localhost:8080/api/v1/activity";
 
 const postData = async (activities: ActivitiesProps[]) => {
   const lastIndex = activities.length - 1;
