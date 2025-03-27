@@ -2,14 +2,14 @@ interface ActivitiesProps {
   id: number;
   title: string;
   url: string;
-  creationDate?: string;
-  endDate?: string | null;
   stories: number;
   instagramReels: number;
   facebookReels: number;
   facebookStories: number;
   youtubeShorts: number;
 }
+
+let lastUrl = "";
 
 let activities: ActivitiesProps[] = [];
 
@@ -27,34 +27,37 @@ function isInvalidUrl(url: string) {
   else return false;
 }
 
-function counter(url: string, index: number) {
+async function counter(url: string, index: number) {
   if (url.includes("instagram.com/")) {
     if (url.includes("stories")) activities[index].stories += 1;
     else if (url.includes("reels")) activities[index].instagramReels += 1;
+    await putHistory(activities[index]);
     return;
   }
 
   if (url.includes("youtube.com/shorts")) {
+    console.log("entrou");
     activities[index].youtubeShorts += 1;
+    await putHistory(activities[index]);
     return;
   }
 
   if (url.includes("facebook.com/")) {
     if (url.includes("stories")) activities[index].facebookStories += 1;
     else if (url.includes("reel")) activities[index].facebookReels += 1;
+    await putHistory(activities[index]);
     return;
   }
 }
 
-function createData(tabId: number, url: string, title: string) {
-  let cleanUrl = url!.match(/https?:\/\/[^\/]+\/[^\/]+\/?.*/)!?.[0];
-  console.log("CLEAN URL: " + cleanUrl);
+function createActivity(tabId: number, url: string, title: string) {
+  let cleanUrl = url.replace(/^https?:\/\/([a-zA-Z0-9.-]+)(?:\/.*)?$/, "$1");
+
+  console.log("CLEAN URL: " + cleanUrl + url);
   activities.push({
     id: tabId,
     url: cleanUrl,
     title,
-    creationDate: new Date().toISOString(),
-    endDate: null,
     stories: 0,
     facebookReels: 0,
     facebookStories: 0,
@@ -68,7 +71,7 @@ type TabType = chrome.tabs.Tab;
 type RemoveInfoType = chrome.tabs.TabRemoveInfo;
 
 chrome.tabs.onUpdated.addListener(
-  (tabId: number, changeInfo: ChangeInfoType, tab: TabType) => {
+  async (tabId: number, changeInfo: ChangeInfoType, tab: TabType) => {
     if (isInvalidUrl(tab.url!)) return;
 
     const getIndexOftabIdThatAlreadyExists = activities.findIndex(
@@ -76,34 +79,45 @@ chrome.tabs.onUpdated.addListener(
     );
 
     if (changeInfo.status == "complete") {
-      if (getIndexOftabIdThatAlreadyExists >= 0)
-        counter(tab.url!, getIndexOftabIdThatAlreadyExists);
-      if (getIndexOftabIdThatAlreadyExists === -1)
-        createData(tab.id!, tab.url!, tab.title!);
+      if (tab.url != lastUrl)
+        if (getIndexOftabIdThatAlreadyExists >= 0 && tab.url) {
+          lastUrl = tab.url;
+          await counter(tab.url!, getIndexOftabIdThatAlreadyExists);
+          return;
+        }
+
+      if (getIndexOftabIdThatAlreadyExists === -1) {
+        createActivity(tab.id!, tab.url!, tab.title!);
+        await postActivity(activities);
+        return;
+      }
     }
 
     console.log(activities);
   }
 );
 
-chrome.tabs.onRemoved.addListener(
-  (tabId: number, removeInfo: RemoveInfoType) => {
-    activities = activities.map((tab) => {
-      if (tab.id === tabId) {
-        tab.endDate = new Date().toISOString();
-      }
-      return tab;
-    });
-    console.log(activities);
-  }
-);
+// chrome.tabs.onRemoved.addListener(
+//   async (tabId: number, removeInfo: RemoveInfoType) => {
+//     let indexToBeEnded = 0;
+//     activities = activities.map((tab, index) => {
+//       if (tab.id === tabId) {
+//         tab.endDate = new Date().toISOString();
+//         indexToBeEnded = index;
+//       }
+//       return tab;
+//     });
 
-const url = "http://localhost:8080/api/v1/activity";
+//     await putEndDate(index);
+//   }
+// );
 
-const postData = async (activities: ActivitiesProps[]) => {
+const API = "http://localhost:8080/api/v1/activity";
+
+const postActivity = async (activities: ActivitiesProps[]) => {
   const lastIndex = activities.length - 1;
 
-  const request = await fetch(url, {
+  const request = await fetch(API, {
     method: "POST",
     headers: {
       "Content-type": "Application/json",
@@ -114,4 +128,29 @@ const postData = async (activities: ActivitiesProps[]) => {
 
   const response = await request.json();
   console.log(response);
+  return response;
+};
+
+const putHistory = async (activity: any) => {
+  console.log("history:" + activity.stories);
+  const history = {
+    stories: activity.stories,
+    instagramReels: activity.instagramReels,
+    facebookReels: activity.facebookReels,
+    facebookStories: activity.facebookStories,
+    youtubeShorts: activity.youtubeShorts,
+  };
+
+  const request = await fetch(API + "/" + activity.url, {
+    method: "PUT",
+    headers: {
+      "Content-type": "Application/json",
+    },
+    body: JSON.stringify(history),
+  });
+  console.log(request);
+
+  const response = await request.json();
+  console.log(response);
+  return response;
 };

@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+let lastUrl = "";
 let activities = [];
 function isInvalidUrl(url) {
     console.log(url);
@@ -23,35 +24,38 @@ function isInvalidUrl(url) {
         return false;
 }
 function counter(url, index) {
-    if (url.includes("instagram.com/")) {
-        if (url.includes("stories"))
-            activities[index].stories += 1;
-        else if (url.includes("reels"))
-            activities[index].instagramReels += 1;
-        return;
-    }
-    if (url.includes("youtube.com/shorts")) {
-        activities[index].youtubeShorts += 1;
-        return;
-    }
-    if (url.includes("facebook.com/")) {
-        if (url.includes("stories"))
-            activities[index].facebookStories += 1;
-        else if (url.includes("reel"))
-            activities[index].facebookReels += 1;
-        return;
-    }
+    return __awaiter(this, void 0, void 0, function* () {
+        if (url.includes("instagram.com/")) {
+            if (url.includes("stories"))
+                activities[index].stories += 1;
+            else if (url.includes("reels"))
+                activities[index].instagramReels += 1;
+            yield putHistory(activities[index]);
+            return;
+        }
+        if (url.includes("youtube.com/shorts")) {
+            console.log("entrou");
+            activities[index].youtubeShorts += 1;
+            yield putHistory(activities[index]);
+            return;
+        }
+        if (url.includes("facebook.com/")) {
+            if (url.includes("stories"))
+                activities[index].facebookStories += 1;
+            else if (url.includes("reel"))
+                activities[index].facebookReels += 1;
+            yield putHistory(activities[index]);
+            return;
+        }
+    });
 }
-function createData(tabId, url, title) {
-    var _a;
-    let cleanUrl = (_a = url.match(/https?:\/\/[^\/]+\/[^\/]+\/?.*/)) === null || _a === void 0 ? void 0 : _a[0];
-    console.log("CLEAN URL: " + cleanUrl);
+function createActivity(tabId, url, title) {
+    let cleanUrl = url.replace(/^https?:\/\/([a-zA-Z0-9.-]+)(?:\/.*)?$/, "$1");
+    console.log("CLEAN URL: " + cleanUrl + url);
     activities.push({
         id: tabId,
         url: cleanUrl,
         title,
-        creationDate: new Date().toISOString(),
-        endDate: null,
         stories: 0,
         facebookReels: 0,
         facebookStories: 0,
@@ -59,42 +63,42 @@ function createData(tabId, url, title) {
         youtubeShorts: 0,
     });
 }
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => __awaiter(void 0, void 0, void 0, function* () {
     if (isInvalidUrl(tab.url))
         return;
     const getIndexOftabIdThatAlreadyExists = activities.findIndex((tabData) => tabData.id === tabId);
     if (changeInfo.status == "complete") {
-        if (getIndexOftabIdThatAlreadyExists >= 0)
-            counter(tab.url, getIndexOftabIdThatAlreadyExists);
-        if (getIndexOftabIdThatAlreadyExists === -1)
-            createData(tab.id, tab.url, tab.title);
-    }
-    console.log(activities);
-});
-chrome.tabs.onCreated.addListener((tab) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(tab.status);
-    console.log(tab.url);
-    if (tab.status === "complete") {
-        if (isInvalidUrl(tab.url))
+        if (tab.url != lastUrl)
+            if (getIndexOftabIdThatAlreadyExists >= 0 && tab.url) {
+                lastUrl = tab.url;
+                yield counter(tab.url, getIndexOftabIdThatAlreadyExists);
+                return;
+            }
+        if (getIndexOftabIdThatAlreadyExists === -1) {
+            createActivity(tab.id, tab.url, tab.title);
+            yield postActivity(activities);
             return;
-        console.log("EVENTO DE CREATED");
-        createData(tab.id, tab.url, tab.title);
-        yield postData(activities);
-    }
-}));
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    activities = activities.map((tab) => {
-        if (tab.id === tabId) {
-            tab.endDate = new Date().toISOString();
         }
-        return tab;
-    });
+    }
     console.log(activities);
-});
-const url = "http://localhost:8080/api/v1/activity";
-const postData = (activities) => __awaiter(void 0, void 0, void 0, function* () {
+}));
+// chrome.tabs.onRemoved.addListener(
+//   async (tabId: number, removeInfo: RemoveInfoType) => {
+//     let indexToBeEnded = 0;
+//     activities = activities.map((tab, index) => {
+//       if (tab.id === tabId) {
+//         tab.endDate = new Date().toISOString();
+//         indexToBeEnded = index;
+//       }
+//       return tab;
+//     });
+//     await putEndDate(index);
+//   }
+// );
+const API = "http://localhost:8080/api/v1/activity";
+const postActivity = (activities) => __awaiter(void 0, void 0, void 0, function* () {
     const lastIndex = activities.length - 1;
-    const request = yield fetch(url, {
+    const request = yield fetch(API, {
         method: "POST",
         headers: {
             "Content-type": "Application/json",
@@ -104,4 +108,26 @@ const postData = (activities) => __awaiter(void 0, void 0, void 0, function* () 
     console.log(request);
     const response = yield request.json();
     console.log(response);
+    return response;
+});
+const putHistory = (activity) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("history:" + activity.stories);
+    const history = {
+        stories: activity.stories,
+        instagramReels: activity.instagramReels,
+        facebookReels: activity.facebookReels,
+        facebookStories: activity.facebookStories,
+        youtubeShorts: activity.youtubeShorts,
+    };
+    const request = yield fetch(API + "/" + activity.url, {
+        method: "PUT",
+        headers: {
+            "Content-type": "Application/json",
+        },
+        body: JSON.stringify(history),
+    });
+    console.log(request);
+    const response = yield request.json();
+    console.log(response);
+    return response;
 });
